@@ -1298,7 +1298,7 @@ export const SlidePreview: React.FC = () => {
           {/* 编辑框 */}
           <Textarea
             label="输入修改指令(将自动添加页面描述)"
-            placeholder="例如：把背景改成蓝色、增大标题字号、更改文本框样式为虚线..."
+            placeholder="例如：将框选区域内的素材移除、把背景改成蓝色、增大标题字号、更改文本框样式为虚线..."
             value={editPrompt}
             onChange={(e) => setEditPrompt(e.target.value)}
             rows={4}
