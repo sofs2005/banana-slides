@@ -15,6 +15,10 @@ concurrency:
   group: translate-readme
   cancel-in-progress: true
 
+# 授予工作流推送权限
+permissions:
+  contents: write
+
 jobs:
   translate:
     name: Translate README to English
