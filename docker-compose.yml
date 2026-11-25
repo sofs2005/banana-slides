@@ -8,6 +8,7 @@ services:
         GHCR_REGISTRY: ${GHCR_REGISTRY:-ghcr.io/}
         APT_MIRROR: ${APT_MIRROR:-}
         PYPI_INDEX_URL: ${PYPI_INDEX_URL:-}
+    image: ${BANANA_BACKEND_IMAGE:-ghcr.io/sofs2005/banana-slides-backend:latest}
     container_name: banana-slides-backend
     ports:
       # 宿主机端口:容器内部端口
@@ -37,7 +38,8 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - banana-slides-network
+      br0:
+        ipv4_address: 10.6.6.10
 
   frontend:
     build:
@@ -48,6 +50,7 @@ services:
         DOCKER_BUILDKIT: 1
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         NPM_REGISTRY: ${NPM_REGISTRY:-}
+    image: ${BANANA_FRONTEND_IMAGE:-ghcr.io/sofs2005/banana-slides-frontend:latest}
     container_name: banana-slides-frontend
     ports:
       - "${FRONTEND_PORT:-3011}:80"
@@ -55,11 +58,12 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - banana-slides-network
+      br0:
+        ipv4_address: 10.6.6.9
 
 networks:
-  banana-slides-network:
-    driver: bridge
+  br0:
+    external: true
 
 volumes:
   backend-data:

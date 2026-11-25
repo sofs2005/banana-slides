@@ -1,0 +1,123 @@
+name: Build GHCR Images
+
+# 本 fork 的镜像构建入口：
+#   - push 到 main：自动构建 backend + frontend 并推送 ghcr.io/<owner>/banana-slides-*
+#   - workflow_dispatch：可指定额外 tag（如 v0.9.1）与目标架构
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '额外镜像 tag（如 v0.9.1，留空则只发 latest + sha-xxxxxxx）'
+        required: false
+        type: string
+      platforms:
+        description: '目标架构'
+        required: true
+        type: choice
+        options:
+          - linux/amd64
+          - linux/amd64,linux/arm64
+        default: linux/amd64
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ghcr-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/banana-slides
+
+jobs:
+  build:
+    name: Build ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            dockerfile: ./backend/Dockerfile
+          - component: frontend
+            dockerfile: ./frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve build metadata
+        id: build
+        run: |
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+        if: contains(inputs.platforms, 'arm64')
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.component }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+            type=sha,format=short,prefix=sha-
+
+      - name: Build and push ${{ matrix.component }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ inputs.platforms || 'linux/amd64' }}
+          push: true
+          provenance: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+          build-args: |
+            DOCKER_REGISTRY=${{ vars.DOCKER_REGISTRY }}
+            GHCR_REGISTRY=${{ vars.GHCR_REGISTRY || 'ghcr.io/' }}
+            APT_MIRROR=${{ vars.APT_MIRROR }}
+            PYPI_INDEX_URL=${{ vars.PYPI_INDEX_URL }}
+            NPM_REGISTRY=${{ vars.NPM_REGISTRY }}
+            APP_VERSION_TAG=${{ inputs.tag || 'dev' }}
+            APP_COMMIT_SHA=${{ github.sha }}
+            APP_COMMIT_SHORT_SHA=${{ steps.build.outputs.short_sha }}
+            APP_BUILD_DATE=${{ steps.build.outputs.date }}
+
+  # 构建结束后把镜像 digest 打到 job summary，方便核对 99 上跑的是哪一版
+  summary:
+    name: Summary
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          {
+            echo "## banana-slides 镜像构建"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "|---|---|"
+            echo "| commit | \`${{ github.sha }}\` |"
+            echo "| backend | \`ghcr.io/${GITHUB_REPOSITORY_OWNER}/banana-slides-backend:${{ inputs.tag || 'latest' }}\` |"
+            echo "| frontend | \`ghcr.io/${GITHUB_REPOSITORY_OWNER}/banana-slides-frontend:${{ inputs.tag || 'latest' }}\` |"
+            echo "| 结果 | ${{ needs.build.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
