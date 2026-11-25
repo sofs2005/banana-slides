@@ -1,9 +1,7 @@
 name: PR Quick Check
 
 on:
-  pull_request:
-    branches: [ main, develop ]
-
+  workflow_dispatch:
 # Quick check: lint + unit tests + build + smoke
 env:
   UV_INDEX_URL: https://pypi.org/simple

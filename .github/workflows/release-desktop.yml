@@ -1,20 +1,7 @@
 name: Release Desktop App
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Release tag to upload to, for example v0.3.0. Leave empty to build CI artifacts only.'
-        required: false
-        type: string
-      version:
-        description: 'Desktop package version override, for example 0.3.0. Defaults to tag_name/current tag without v.'
-        required: false
-        type: string
-
 permissions:
   contents: write
 

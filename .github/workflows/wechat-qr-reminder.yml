@@ -1,11 +1,7 @@
 name: WeChat QR Reminder
 
 on:
-  schedule:
-    # Every Sunday at 12:30 Asia/Shanghai. GitHub Actions cron uses UTC.
-    - cron: '30 4 * * 0'
   workflow_dispatch:
-
 permissions:
   issues: write
 

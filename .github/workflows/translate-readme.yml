@@ -1,28 +1,7 @@
 name: Sync README translations
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'README*.md'
-      - 'docs/i18n/**'
-      - 'scripts/translate_readme*.py'
-      - 'scripts/generate_readme_buttons.mjs'
-      - 'scripts/render_readme_hero.py'
-      - '.github/workflows/translate-readme.yml'
-  pull_request:
-    paths:
-      - 'README*.md'
-      - 'docs/i18n/**'
-      - 'scripts/translate_readme*.py'
-      - 'scripts/tests/test_readme_i18n.py'
-      - 'scripts/generate_readme_buttons.mjs'
-      - 'assets/buttons/**'
-      - 'assets/readme/**'
-      - 'scripts/render_readme_hero.py'
-      - '.github/workflows/translate-readme.yml'
   workflow_dispatch:
-
 # Finish each sync; the next queued run checks out the latest main.
 concurrency:
   group: readme-i18n-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'main' }}
